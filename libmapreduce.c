@@ -36,7 +36,6 @@ pthread_t *worker;
  */
 static void process_key_value(const char *key, const char *value, mapreduce_t *mr)
 {
-	//if(mr->size >= mr->length ) mr->values = realloc(mr->values, (mr->length*=2));
 	int i;
 	for(i=0;i<mr->size; i++){
 		if(strcmp(mr->entries[i]->key, key)==0){
@@ -54,7 +53,6 @@ static void process_key_value(const char *key, const char *value, mapreduce_t *m
 	mr->entries[mr->size]->value = malloc(strlen(value)+1);
 	strcpy(mr->entries[mr->size]->key, key);
 	strcpy(mr->entries[mr->size]->value, value);
-	//printf("proc_new: %s: %s\n", mr->keys[mr->size], mr->values[mr->size]);
 	mr->size++;
 
 }
@@ -109,7 +107,6 @@ static int read_from_fd(int fd, char *buffer, mapreduce_t *mr)
 	}
 
 	buffer[offset + bytes_read] = '\0';
-	//printf("offset: %d + read: %d  == %d\n", offset, bytes_read, offset+ bytes_read);
 
 	/* Loop through each "key: value\n" line from the fd. */
 	char *line;
@@ -145,23 +142,19 @@ static int read_from_fd(int fd, char *buffer, mapreduce_t *mr)
 }
 
 void *retrieve(void* atr){
-	//printf("two\n");
 	mapreduce_t *mr = (mapreduce_t*)atr;
-	//char buf[mr->inputs][BUFFER_SIZE];
 	int counter = mr->length;
 	while(counter>0){
 		struct  epoll_event ev;
 		bzero(&ev, sizeof(struct epoll_event));
-    	int s = epoll_wait( mr->fd, &ev, 1, -1);
+    	epoll_wait( mr->fd, &ev, 1, -1);
     	int i;
     	char *buf = NULL;
     	for(i=0;i<mr->length;i++){
     		if(mr->fds[i]->fd!=NULL && mr->fds[i]->fd[0] == ev.data.fd)
     			buf = mr->fds[i]->value;
     	}
-    	//if(ev.data.fd == NULL) continue;
-    	//if(buf == NULL) printf("weird:::::::::\n");//buf = malloc(BUFFER_SIZE);
-   
+
 		int suc = read_from_fd(ev.data.fd, buf , mr);
 		if(suc != 1 ){
 			--counter;
@@ -169,7 +162,6 @@ void *retrieve(void* atr){
 		}
 	}
 
-	//printf("three\n");
 
 	return (void *)mr;
 }
@@ -221,12 +213,12 @@ void mapreduce_map_all(mapreduce_t *mr, const char **values)
 		int read_fd = mr->fds[i]->fd[0];
         int write_fd = mr->fds[i]->fd[1];
 		if(pid == 0){ //child
-			int j;
+			//int j;
             //for(j=0;j<=i;j++) close(mr->fds[j]->fd[0]);
             //for(j=0;j< i;j++) close(mr->fds[j]->fd[1]);
-            //printf("call: %d: %d:%d\n", i, read_fd, write_fd);
+
             mr->mymap(write_fd, values[i]);
-            //write(write_fd, "", 0);
+
         	close(write_fd);
 
         	bzero(&(events[i]), sizeof(struct epoll_event));
@@ -239,7 +231,7 @@ void mapreduce_map_all(mapreduce_t *mr, const char **values)
 			close(write_fd);
 		}
 	}
-	//printf("one\n");
+
 	mr->fd = epoll_fd;
 	worker = malloc(sizeof(pthread_t));
 	pthread_create(worker, NULL, retrieve, (void *)mr);
@@ -254,10 +246,7 @@ void mapreduce_reduce_all(mapreduce_t *mr)
 {
 	void *ret;
 	pthread_join(*worker, &ret);
-	/*int i;
-	for(i = 0; i<mr->size; i++){
-		printf("reduce: %s: %s\n", mr->entries[i]->key, mr->entries[i]->value);
-	}*/
+
 
 }
 
